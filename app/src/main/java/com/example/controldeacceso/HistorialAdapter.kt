@@ -6,12 +6,18 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
-class HistorialAdapter(private var accesos: List<Acceso>) : RecyclerView.Adapter<HistorialAdapter.HistorialViewHolder>() {
+class HistorialAdapter(
+    private var accesos: List<AccesoResponse>,
+    private var listaPersonal: List<Persona> = emptyList()
+) : RecyclerView.Adapter<HistorialAdapter.HistorialViewHolder>() {
 
     class HistorialViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvNombre: TextView = view.findViewById(R.id.tvNombreHist)
-        val tvUbicacion: TextView = view.findViewById(R.id.tvUbicacionHist)
+        val tvDni: TextView = view.findViewById(R.id.tvUbicacionHist)
         val tvTipo: TextView = view.findViewById(R.id.tvTipoHist)
         val tvFecha: TextView = view.findViewById(R.id.tvFechaHist)
     }
@@ -23,22 +29,41 @@ class HistorialAdapter(private var accesos: List<Acceso>) : RecyclerView.Adapter
 
     override fun onBindViewHolder(holder: HistorialViewHolder, position: Int) {
         val acceso = accesos[position]
-        holder.tvNombre.text = acceso.nombrePersona
-        holder.tvUbicacion.text = "Ubicación: ${acceso.cargoPersona}"
-        holder.tvTipo.text = acceso.tipo
-        holder.tvFecha.text = acceso.fecha
+        
+        // Buscar el nombre de la persona por su DNI en la lista de personal
+        val persona = listaPersonal.find { it.dni == acceso.dni }
+        
+        holder.tvNombre.text = persona?.nombre ?: "Visitante / Desconocido"
+        holder.tvDni.text = "DNI: ${acceso.dni}"
+        holder.tvTipo.text = acceso.tipo.uppercase()
+        
+        // Formatear fecha y hora
+        holder.tvFecha.text = formatFechaHora(acceso.fecha)
 
-        if (acceso.tipo == "Entrada") {
+        if (acceso.tipo.contains("Entrada", ignoreCase = true)) {
             holder.tvTipo.setTextColor(Color.parseColor("#2E7D32")) // Verde
         } else {
             holder.tvTipo.setTextColor(Color.parseColor("#C62828")) // Rojo
         }
     }
 
+    private fun formatFechaHora(fechaIso: String): String {
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+            parser.timeZone = TimeZone.getTimeZone("UTC")
+            val date = parser.parse(fechaIso)
+            val formatter = SimpleDateFormat("dd/MM/yyyy  -  HH:mm:ss", Locale.getDefault())
+            formatter.format(date!!)
+        } catch (e: Exception) {
+            fechaIso
+        }
+    }
+
     override fun getItemCount() = accesos.size
 
-    fun updateList(newList: List<Acceso>) {
-        accesos = newList
+    fun updateData(newAccesos: List<AccesoResponse>, newPersonal: List<Persona>) {
+        this.accesos = newAccesos
+        this.listaPersonal = newPersonal
         notifyDataSetChanged()
     }
 }

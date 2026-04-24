@@ -10,6 +10,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
 
 class LoginActivity : AppCompatActivity() {
     
@@ -40,26 +44,34 @@ class LoginActivity : AppCompatActivity() {
         btnLogin.setOnClickListener {
             val usuario = etUsuario.text.toString()
             val password = etPassword.text.toString()
-
+            
             if (usuario.isEmpty() || password.isEmpty()) {
                 showAlert("Error", "Por favor, complete todos los campos.")
             } else {
-                if (dbHelper.validarUsuario(usuario, password)) {
-                    // Guardar datos en SharedPreferences para el perfil
-                    val sharedPref = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-                    with(sharedPref.edit()) {
-                        putString("userName", usuario.substringBefore("@")) // Nombre simplificado
-                        putString("userEmail", usuario)
-                        apply()
+                val request = LoginRequest(usuario, password)
+                RetrofitClient.api.login(request).enqueue(object : Callback<LoginResponse> {
+
+                    override fun onResponse(call: Call<LoginResponse>, response: Response<LoginResponse>) {
+                        if (response.isSuccessful) {
+                            val sharedPref = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+                            with(sharedPref.edit()) {
+                                putString("userName", usuario.substringBefore("@"))
+                                putString("userEmail", usuario)
+                                apply()
+                            }
+
+                            val intent = Intent(this@LoginActivity, WelcomeActivity::class.java)
+                            startActivity(intent)
+                            finish()
+                        } else {
+                            showAlert("Error", "Usuario o contraseña incorrectos")
+                        }
                     }
 
-                    // Flujo: Login -> Welcome
-                    val intent = Intent(this, WelcomeActivity::class.java)
-                    startActivity(intent)
-                    finish()
-                } else {
-                    showAlert("Error", "Usuario no encontrado o contraseña incorrecta.")
-                }
+                    override fun onFailure(call: Call<LoginResponse>, t: Throwable) {
+                        showAlert("Error", "No se pudo conectar con el servidor: ${t.message}")
+                    }
+                })
             }
         }
 

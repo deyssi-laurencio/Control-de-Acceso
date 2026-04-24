@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    android:background="#F5F7FB">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reconocimiento Facial"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#154A98"
+        android:layout_marginBottom="32dp"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        app:cardCornerRadius="140dp"
+        app:strokeColor="#154A98"
+        app:strokeWidth="4dp"
+        android:layout_marginBottom="32dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- Simulador de Cámara / Escáner -->
+            <ImageView
+                android:id="@+id/ivCameraPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@android:drawable/ic_menu_camera"
+                android:padding="60dp"
+                android:alpha="0.5"/>
+
+            <View
+                android:id="@+id/viewScanLine"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="#154A98"
+                android:visibility="gone"/>
+        </FrameLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Presione el botón para iniciar escaneo"
+        android:textSize="16sp"
+        android:textColor="#666"
+        android:layout_marginBottom="32dp"
+        android:textAlignment="center"/>
+
+    <Button
+        android:id="@+id/btnStartScan"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:text="Escanear Rostro"
+        android:backgroundTint="#154A98"
+        app:cornerRadius="12dp"/>
+
+    <ProgressBar
+        android:id="@+id/pbScanning"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:indeterminate="true"
+        android:visibility="gone"/>
+
+</LinearLayout>

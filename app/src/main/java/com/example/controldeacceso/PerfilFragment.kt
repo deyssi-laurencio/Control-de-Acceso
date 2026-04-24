@@ -16,6 +16,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class PerfilFragment : Fragment() {
 
@@ -63,26 +66,35 @@ class PerfilFragment : Fragment() {
 
         // Aplicar modo edición o solo lectura
         etName.isEnabled = modoEdicion
-        etEmail.isEnabled = modoEdicion
+        etEmail.isEnabled = false // El correo no se edita por ser el ID único
         etPassword.isEnabled = modoEdicion
         btnChangePhoto.visibility = if (modoEdicion) View.VISIBLE else View.GONE
         btnSaveProfile.visibility = if (modoEdicion) View.VISIBLE else View.GONE
 
-        // Cargar datos actuales desde SharedPreferences
+        // Cargar datos desde la API
         val sharedPref = requireActivity().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-        val name = sharedPref.getString("userName", "Admin Colegio")
-        val email = sharedPref.getString("userEmail", "admin@mercedes.edu.pe")
-        val photoUriString = sharedPref.getString("userPhotoUri", null)
-
-        etName.setText(name)
-        etEmail.setText(email)
+        val userEmail = sharedPref.getString("userEmail", "") ?: ""
         
-        if (photoUriString != null) {
-            try {
-                ivProfilePic.setImageURI(Uri.parse(photoUriString))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        if (userEmail.isNotEmpty()) {
+            RetrofitClient.api.obtenerUsuario(userEmail).enqueue(object : Callback<UsuarioResponse> {
+                override fun onResponse(call: Call<UsuarioResponse>, response: Response<UsuarioResponse>) {
+                    if (response.isSuccessful && response.body() != null) {
+                        val usuario = response.body()!!
+                        etName.setText(usuario.nombre)
+                        etEmail.setText(usuario.correo)
+                        etPassword.setText(usuario.password)
+                        
+                        // Cargar foto local si existe (según requerimiento de mantener lógica actual de imagen)
+                        val photoUriString = sharedPref.getString("userPhotoUri", null)
+                        if (photoUriString != null) {
+                            ivProfilePic.setImageURI(Uri.parse(photoUriString))
+                        }
+                    }
+                }
+                override fun onFailure(call: Call<UsuarioResponse>, t: Throwable) {
+                    Toast.makeText(context, "Error al cargar perfil del servidor", Toast.LENGTH_SHORT).show()
+                }
+            })
         }
 
         // Botón cambiar foto
@@ -94,28 +106,37 @@ class PerfilFragment : Fragment() {
         // Botón guardar perfil
         btnSaveProfile.setOnClickListener {
             val newName = etName.text.toString().trim()
-            val newEmail = etEmail.text.toString().trim()
             val newPassword = etPassword.text.toString().trim()
 
-            if (newName.isNotEmpty() && newEmail.isNotEmpty()) {
-                with(sharedPref.edit()) {
-                    putString("userName", newName)
-                    putString("userEmail", newEmail)
-                    if (newPassword.isNotEmpty()) {
-                        putString("userPassword", newPassword)
+            if (newName.isNotEmpty() && newPassword.isNotEmpty()) {
+                val request = UsuarioRequest(
+                    nombre = newName,
+                    password = newPassword,
+                    foto = sharedPref.getString("userPhotoUri", "") ?: ""
+                )
+
+                RetrofitClient.api.actualizarUsuario(userEmail, request).enqueue(object : Callback<GenericResponse> {
+                    override fun onResponse(call: Call<GenericResponse>, response: Response<GenericResponse>) {
+                        if (response.isSuccessful) {
+                            with(sharedPref.edit()) {
+                                putString("userName", newName)
+                                apply()
+                            }
+                            
+                            (activity as? MainActivity)?.updateNavHeader()
+                            Toast.makeText(context, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
+                            parentFragmentManager.popBackStack()
+                        } else {
+                            Toast.makeText(context, "Error al actualizar perfil", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                    apply()
-                }
-                
-                (activity as? MainActivity)?.updateNavHeader()
-                Toast.makeText(context, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
-                
-                // Si venimos de Configuración, podemos volver atrás al guardar
-                if (modoEdicion) {
-                    parentFragmentManager.popBackStack()
-                }
+
+                    override fun onFailure(call: Call<GenericResponse>, t: Throwable) {
+                        Toast.makeText(context, "Error de red: ${t.message}", Toast.LENGTH_SHORT).show()
+                    }
+                })
             } else {
-                Toast.makeText(context, "El nombre y correo no pueden estar vacíos", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Campos vacíos no permitidos", Toast.LENGTH_SHORT).show()
             }
         }
 
